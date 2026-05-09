@@ -53,8 +53,13 @@ export default function VagasPage() {
     setVeiculos(novaLista);
   }
 
+  function editVeiculo(id, veiculo) {
+    // const novaLista = veiculos.filter((veiculo) => veiculo.id !== id);
+    console.log(veiculo);
+  }
+
   return (
-    <main className="p-8 w-full flex flex-col items-center justify-center">
+    <main className="p-8 w-full flex flex-col flex-1 items-center justify-center">
       <h1 className="mb-6 text-3xl font-bold">Controle de Vagas</h1>
 
       <div className="mb-6 flex flex-col gap-3 max-w-md">
@@ -97,6 +102,38 @@ export default function VagasPage() {
           >
             <div>
               <p>
+                <strong>Placa:</strong>
+                <input
+                  type="text"
+                  placeholder="Placa"
+                  value={veiculo.placa}
+                  disabled
+                  className="border p-2 rounded"
+                />
+              </p>
+
+              <p>
+                <strong>Vaga:</strong>
+                <input
+                  type="text"
+                  placeholder="Vaga"
+                  value={veiculo.vaga}
+                  disabled
+                  className="border p-2 rounded"
+                />
+              </p>
+
+              <p>
+                <strong>Entrada:</strong>
+                <input
+                  type="datetime-local"
+                  value={veiculo.horarioEntrada}
+                  disabled
+                  className="border p-2 rounded"
+                />
+              </p>
+
+              {/* <p>
                 <strong>Placa:</strong> {veiculo.placa}
               </p>
 
@@ -106,7 +143,7 @@ export default function VagasPage() {
 
               <p>
                 <strong>Entrada:</strong> {veiculo.horarioEntrada}
-              </p>
+              </p> */}
             </div>
 
             <button
@@ -115,6 +152,13 @@ export default function VagasPage() {
             >
               DELETE
             </button>
+
+            {/* <button
+              onClick={() => editVeiculo(veiculo.id, veiculo)}
+              className="bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              EDIT
+            </button> */}
           </div>
         ))}
       </div>

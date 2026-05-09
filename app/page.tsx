@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="p-8 w-full flex flex-col items-center justify-center">
+    <main className="p-8 w-full flex flex-col items-center justify-center flex-1">
       <h1 className="text-3xl font-bold">Sistema de Estacionamento</h1>
 
       <Link
