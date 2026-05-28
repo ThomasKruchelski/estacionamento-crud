@@ -11,6 +11,14 @@ export default function VagasPage() {
 
   const [veiculos, setVeiculos] = useState([]);
 
+  // Novos states para controlar a edição
+  const [editandoId, setEditandoId] = useState(null);
+  const [dadosEdicao, setDadosEdicao] = useState({
+    placa: "",
+    vaga: "",
+    horarioEntrada: "",
+  });
+
   // Carregar do localStorage
   useEffect(() => {
     const dadosSalvos = localStorage.getItem(STORAGE_KEY);
@@ -23,8 +31,6 @@ export default function VagasPage() {
   // Salvar no localStorage sempre que mudar
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(veiculos));
-    console.log("veiculos");
-    console.log(veiculos);
   }, [veiculos]);
 
   function adicionarVeiculo() {
@@ -49,13 +55,39 @@ export default function VagasPage() {
 
   function removerVeiculo(id) {
     const novaLista = veiculos.filter((veiculo) => veiculo.id !== id);
-
     setVeiculos(novaLista);
   }
 
-  function editVeiculo(id, veiculo) {
-    // const novaLista = veiculos.filter((veiculo) => veiculo.id !== id);
-    console.log(veiculo);
+  // --- Funções de Edição ---
+  function iniciarEdicao(veiculo) {
+    setEditandoId(veiculo.id);
+    setDadosEdicao({
+      placa: veiculo.placa,
+      vaga: veiculo.vaga,
+      horarioEntrada: veiculo.horarioEntrada,
+    });
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+  }
+
+  function salvarEdicao() {
+    if (
+      !dadosEdicao.placa ||
+      !dadosEdicao.vaga ||
+      !dadosEdicao.horarioEntrada
+    ) {
+      alert("Nenhum campo pode ficar vazio na edição.");
+      return;
+    }
+
+    const novaLista = veiculos.map((v) =>
+      v.id === editandoId ? { ...v, ...dadosEdicao } : v,
+    );
+
+    setVeiculos(novaLista);
+    setEditandoId(null);
   }
 
   return (
@@ -88,79 +120,109 @@ export default function VagasPage() {
 
         <button
           onClick={adicionarVeiculo}
-          className="bg-green-600 text-white p-2 rounded"
+          className="bg-green-600 text-white p-2 rounded hover:bg-green-700 transition"
         >
           Registrar veículo
         </button>
       </div>
 
-      <div className="space-y-4">
-        {veiculos.map((veiculo) => (
-          <div
-            key={veiculo.id}
-            className="border rounded p-4 flex justify-between items-center"
-          >
-            <div>
-              <p>
-                <strong>Placa:</strong>
-                <input
-                  type="text"
-                  placeholder="Placa"
-                  value={veiculo.placa}
-                  disabled
-                  className="border p-2 rounded"
-                />
-              </p>
+      <div className="space-y-4 w-full max-w-2xl">
+        {veiculos.map((veiculo) => {
+          // Verifica se o item atual é o que está sendo editado
+          const isEditing = editandoId === veiculo.id;
 
-              <p>
-                <strong>Vaga:</strong>
-                <input
-                  type="text"
-                  placeholder="Vaga"
-                  value={veiculo.vaga}
-                  disabled
-                  className="border p-2 rounded"
-                />
-              </p>
+          return (
+            <div
+              key={veiculo.id}
+              className="border rounded p-4 flex flex-col sm:flex-row justify-between items-center gap-4"
+            >
+              <div className="flex flex-col gap-2 w-full">
+                <p className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <strong className="min-w-[80px]">Placa:</strong>
+                  <input
+                    type="text"
+                    placeholder="Placa"
+                    value={isEditing ? dadosEdicao.placa : veiculo.placa}
+                    onChange={(e) =>
+                      setDadosEdicao({ ...dadosEdicao, placa: e.target.value })
+                    }
+                    disabled={!isEditing}
+                    className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
+                  />
+                </p>
 
-              <p>
-                <strong>Entrada:</strong>
-                <input
-                  type="datetime-local"
-                  value={veiculo.horarioEntrada}
-                  disabled
-                  className="border p-2 rounded"
-                />
-              </p>
+                <p className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <strong className="min-w-[80px]">Vaga:</strong>
+                  <input
+                    type="text"
+                    placeholder="Vaga"
+                    value={isEditing ? dadosEdicao.vaga : veiculo.vaga}
+                    onChange={(e) =>
+                      setDadosEdicao({ ...dadosEdicao, vaga: e.target.value })
+                    }
+                    disabled={!isEditing}
+                    className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
+                  />
+                </p>
 
-              {/* <p>
-                <strong>Placa:</strong> {veiculo.placa}
-              </p>
+                <p className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <strong className="min-w-[80px]">Entrada:</strong>
+                  <input
+                    type="datetime-local"
+                    value={
+                      isEditing
+                        ? dadosEdicao.horarioEntrada
+                        : veiculo.horarioEntrada
+                    }
+                    onChange={(e) =>
+                      setDadosEdicao({
+                        ...dadosEdicao,
+                        horarioEntrada: e.target.value,
+                      })
+                    }
+                    disabled={!isEditing}
+                    className={`border p-2 rounded flex-1 ${isEditing ? " border-blue-500" : ""}`}
+                  />
+                </p>
+              </div>
 
-              <p>
-                <strong>Vaga:</strong> {veiculo.vaga}
-              </p>
-
-              <p>
-                <strong>Entrada:</strong> {veiculo.horarioEntrada}
-              </p> */}
+              {/* Botões de Ação */}
+              <div className="flex flex-col gap-2 w-full sm:w-auto">
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={salvarEdicao}
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+                    >
+                      SALVAR
+                    </button>
+                    <button
+                      onClick={cancelarEdicao}
+                      className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
+                    >
+                      CANCELAR
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => iniciarEdicao(veiculo)}
+                      className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition"
+                    >
+                      EDITAR
+                    </button>
+                    <button
+                      onClick={() => removerVeiculo(veiculo.id)}
+                      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
+                    >
+                      DELETE
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-
-            <button
-              onClick={() => removerVeiculo(veiculo.id)}
-              className="bg-red-600 text-white px-4 py-2 rounded"
-            >
-              DELETE
-            </button>
-
-            {/* <button
-              onClick={() => editVeiculo(veiculo.id, veiculo)}
-              className="bg-blue-600 text-white px-4 py-2 rounded"
-            >
-              EDIT
-            </button> */}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </main>
   );
