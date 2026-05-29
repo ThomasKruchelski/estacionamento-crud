@@ -5,9 +5,12 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "veiculos-estacionamento";
 
 export default function VagasPage() {
+  const [cliente, setCliente] = useState("");
+  const [cpf, setCpf] = useState("");
   const [placa, setPlaca] = useState("");
   const [vaga, setVaga] = useState("");
   const [horarioEntrada, sethorarioEntrada] = useState("");
+  const [horarioSaida, sethorarioSaida] = useState("");
 
   const [carregado, setCarregado] = useState(false);
 
@@ -27,6 +30,9 @@ export default function VagasPage() {
     placa: "",
     vaga: "",
     horarioEntrada: "",
+    cpf: "",
+    cliente: "",
+    horarioSaida: "",
   });
 
   // Caso precise fazer a consulga manual ao local storage, mudado para linha 15,16,17
@@ -49,7 +55,7 @@ export default function VagasPage() {
   useEffect(() => {}, [veiculos, carregado]);
 
   function adicionarVeiculo() {
-    if (!placa || !vaga || !horarioEntrada) {
+    if (!placa || !vaga || !horarioEntrada || !cpf || !cliente) {
       alert("Preencha todos os campos");
       return;
     }
@@ -59,6 +65,9 @@ export default function VagasPage() {
       placa,
       vaga,
       horarioEntrada,
+      cpf,
+      cliente,
+      horarioSaida,
     };
 
     setVeiculos((estadoAtual) => [...estadoAtual, novoVeiculo]);
@@ -66,6 +75,8 @@ export default function VagasPage() {
     setPlaca("");
     setVaga("");
     sethorarioEntrada("");
+    setCliente("");
+    setCpf("");
   }
 
   function removerVeiculo(id) {
@@ -80,6 +91,8 @@ export default function VagasPage() {
       placa: veiculo.placa,
       vaga: veiculo.vaga,
       horarioEntrada: veiculo.horarioEntrada,
+      cpf: veiculo.cpf,
+      cliente: veiculo.cliente,
     });
   }
 
@@ -91,7 +104,9 @@ export default function VagasPage() {
     if (
       !dadosEdicao.placa ||
       !dadosEdicao.vaga ||
-      !dadosEdicao.horarioEntrada
+      !dadosEdicao.horarioEntrada ||
+      !dadosEdicao.cpf ||
+      !dadosEdicao.cliente
     ) {
       alert("Nenhum campo pode ficar vazio na edição.");
       return;
@@ -127,6 +142,22 @@ export default function VagasPage() {
         />
 
         <input
+          type="text"
+          placeholder="Nome do Cliente"
+          value={cliente}
+          onChange={(e) => setCliente(e.target.value)}
+          className="border p-2 rounded"
+        />
+
+        <input
+          type="text"
+          placeholder="CPF do Cliente"
+          value={cpf}
+          onChange={(e) => setCpf(e.target.value)}
+          className="border p-2 rounded"
+        />
+
+        <input
           type="datetime-local"
           value={horarioEntrada}
           onChange={(e) => sethorarioEntrada(e.target.value)}
@@ -149,7 +180,9 @@ export default function VagasPage() {
             // Verifica se o item atual é o que está sendo editado
             const isEditing = editandoId === veiculo.id;
 
-            return (
+            return veiculo.horarioSaida !== "" ? (
+              <div key={veiculo.id}></div>
+            ) : (
               <div
                 key={veiculo.id}
                 className="border rounded p-4 flex flex-col sm:flex-row justify-between items-center gap-4"
@@ -180,6 +213,40 @@ export default function VagasPage() {
                       value={isEditing ? dadosEdicao.vaga : veiculo.vaga}
                       onChange={(e) =>
                         setDadosEdicao({ ...dadosEdicao, vaga: e.target.value })
+                      }
+                      disabled={!isEditing}
+                      className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
+                    />
+                  </p>
+
+                  <p className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <strong className="min-w-[80px]">Nome Cliente:</strong>
+                    <input
+                      type="text"
+                      placeholder="Nome do Cliente"
+                      value={isEditing ? dadosEdicao.cliente : veiculo.cliente}
+                      onChange={(e) =>
+                        setDadosEdicao({
+                          ...dadosEdicao,
+                          cliente: e.target.value,
+                        })
+                      }
+                      disabled={!isEditing}
+                      className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
+                    />
+                  </p>
+
+                  <p className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <strong className="min-w-[80px]">CPF Cliente:</strong>
+                    <input
+                      type="text"
+                      placeholder="Nome do Cliente"
+                      value={isEditing ? dadosEdicao.cpf : veiculo.cpf}
+                      onChange={(e) =>
+                        setDadosEdicao({
+                          ...dadosEdicao,
+                          cpf: e.target.value,
+                        })
                       }
                       disabled={!isEditing}
                       className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
