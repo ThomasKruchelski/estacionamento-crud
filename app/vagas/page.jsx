@@ -93,11 +93,27 @@ export default function VagasPage() {
       horarioEntrada: veiculo.horarioEntrada,
       cpf: veiculo.cpf,
       cliente: veiculo.cliente,
+      horarioSaida: veiculo.horarioSaida,
     });
   }
 
   function cancelarEdicao() {
     setEditandoId(null);
+  }
+
+  function registrarSaida(veiculo) {
+    const getDataSaida = new Date();
+
+    const dataSaida = getDataSaida
+      .toString()
+      .replace(" GMT-0300 (Horário Padrão de Brasília)", "");
+    console.log(dataSaida);
+
+    const novaLista = veiculos.map((v) =>
+      v.id === veiculo ? { ...v, horarioSaida: dataSaida } : v,
+    );
+
+    setVeiculos(novaLista);
   }
 
   function salvarEdicao() {
@@ -181,7 +197,11 @@ export default function VagasPage() {
             const isEditing = editandoId === veiculo.id;
 
             return veiculo.horarioSaida !== "" ? (
-              <div key={veiculo.id}></div>
+              <div key={veiculo.id} className="border border-green-400 p-4">
+                <p>Placa: {veiculo.placa}</p>
+                <p>Entrada: {veiculo.horarioEntrada}</p>
+                <p>Saída: {veiculo.horarioSaida}</p>
+              </div>
             ) : (
               <div
                 key={veiculo.id}
@@ -304,6 +324,12 @@ export default function VagasPage() {
                         className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
                       >
                         DELETE
+                      </button>
+                      <button
+                        onClick={() => registrarSaida(veiculo.id)}
+                        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
+                      >
+                        ADICIONAR SAIDA
                       </button>
                     </>
                   )}
