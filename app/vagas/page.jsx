@@ -9,10 +9,13 @@ export default function VagasPage() {
   const [vaga, setVaga] = useState("");
   const [horarioEntrada, sethorarioEntrada] = useState("");
 
+  const [carregado, setCarregado] = useState(false);
+
   const [veiculos, setVeiculos] = useState(() => {
     if (typeof window === "undefined") return [];
 
-    const salvos = localStorage.getItem("veiculos-estacionamento");
+    const salvos = localStorage.getItem(STORAGE_KEY);
+    // setCarregado(true);
     return salvos ? JSON.parse(salvos) : [];
   });
 
@@ -26,21 +29,24 @@ export default function VagasPage() {
     horarioEntrada: "",
   });
 
-  // Carregar do localStorage
-  useEffect(() => {
-    const dadosSalvos = localStorage.getItem(STORAGE_KEY);
+  // Caso precise fazer a consulga manual ao local storage, mudado para linha 15,16,17
+  // useEffect(() => {
+  //   const dadosSalvos = localStorage.getItem(STORAGE_KEY);
 
-    if (dadosSalvos) {
-      setVeiculos(JSON.parse(dadosSalvos));
-    }
-  }, []);
+  //   if (dadosSalvos) {
+  //     setVeiculos(JSON.parse(dadosSalvos));
+  //   }
+  // }, []);
 
   // Salvar no localStorage sempre que mudar
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(veiculos));
+    setCarregado(true);
     console.log("Dados no Storage!");
     console.log(STORAGE_KEY, JSON.stringify(veiculos));
   }, [veiculos]);
+
+  useEffect(() => {}, [veiculos, carregado]);
 
   function adicionarVeiculo() {
     if (!placa || !vaga || !horarioEntrada) {
@@ -101,7 +107,7 @@ export default function VagasPage() {
 
   return (
     <main className="p-8 w-full flex flex-col flex-1 items-center justify-center">
-      <h1 className="mb-6 text-3xl font-bold">Controle de Vagas</h1>
+      <h1 className="mb-6 text-3xl font-bold flex">Controle de Vagas</h1>
 
       <div className="mb-6 flex flex-col gap-3 max-w-md">
         <input
@@ -136,102 +142,109 @@ export default function VagasPage() {
       </div>
 
       <div className="space-y-4 w-full max-w-2xl">
-        {veiculos.map((veiculo) => {
-          // Verifica se o item atual é o que está sendo editado
-          const isEditing = editandoId === veiculo.id;
+        {!carregado ? (
+          <h1>Carregando...</h1>
+        ) : (
+          veiculos.map((veiculo) => {
+            // Verifica se o item atual é o que está sendo editado
+            const isEditing = editandoId === veiculo.id;
 
-          return (
-            <div
-              key={veiculo.id}
-              className="border rounded p-4 flex flex-col sm:flex-row justify-between items-center gap-4"
-            >
-              <div className="flex flex-col gap-2 w-full">
-                <p className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <strong className="min-w-[80px]">Placa:</strong>
-                  <input
-                    type="text"
-                    placeholder="Placa"
-                    value={isEditing ? dadosEdicao.placa : veiculo.placa}
-                    onChange={(e) =>
-                      setDadosEdicao({ ...dadosEdicao, placa: e.target.value })
-                    }
-                    disabled={!isEditing}
-                    className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
-                  />
-                </p>
+            return (
+              <div
+                key={veiculo.id}
+                className="border rounded p-4 flex flex-col sm:flex-row justify-between items-center gap-4"
+              >
+                <div className="flex flex-col gap-2 w-full">
+                  <p className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <strong className="min-w-[80px]">Placa:</strong>
+                    <input
+                      type="text"
+                      placeholder="Placa"
+                      value={isEditing ? dadosEdicao.placa : veiculo.placa}
+                      onChange={(e) =>
+                        setDadosEdicao({
+                          ...dadosEdicao,
+                          placa: e.target.value,
+                        })
+                      }
+                      disabled={!isEditing}
+                      className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
+                    />
+                  </p>
 
-                <p className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <strong className="min-w-[80px]">Vaga:</strong>
-                  <input
-                    type="text"
-                    placeholder="Vaga"
-                    value={isEditing ? dadosEdicao.vaga : veiculo.vaga}
-                    onChange={(e) =>
-                      setDadosEdicao({ ...dadosEdicao, vaga: e.target.value })
-                    }
-                    disabled={!isEditing}
-                    className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
-                  />
-                </p>
+                  <p className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <strong className="min-w-[80px]">Vaga:</strong>
+                    <input
+                      type="text"
+                      placeholder="Vaga"
+                      value={isEditing ? dadosEdicao.vaga : veiculo.vaga}
+                      onChange={(e) =>
+                        setDadosEdicao({ ...dadosEdicao, vaga: e.target.value })
+                      }
+                      disabled={!isEditing}
+                      className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
+                    />
+                  </p>
 
-                <p className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <strong className="min-w-[80px]">Entrada:</strong>
-                  <input
-                    type="datetime-local"
-                    value={
-                      isEditing
-                        ? dadosEdicao.horarioEntrada
-                        : veiculo.horarioEntrada
-                    }
-                    onChange={(e) =>
-                      setDadosEdicao({
-                        ...dadosEdicao,
-                        horarioEntrada: e.target.value,
-                      })
-                    }
-                    disabled={!isEditing}
-                    className={`border p-2 rounded flex-1 ${isEditing ? " border-blue-500" : ""}`}
-                  />
-                </p>
+                  <p className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <strong className="min-w-[80px]">Entrada:</strong>
+                    <input
+                      type="datetime-local"
+                      value={
+                        isEditing
+                          ? dadosEdicao.horarioEntrada
+                          : veiculo.horarioEntrada
+                      }
+                      onChange={(e) =>
+                        setDadosEdicao({
+                          ...dadosEdicao,
+                          horarioEntrada: e.target.value,
+                        })
+                      }
+                      disabled={!isEditing}
+                      className={`border p-2 rounded flex-1 ${isEditing ? " border-blue-500" : ""}`}
+                    />
+                  </p>
+                </div>
+
+                {/* Botões de Ação */}
+                <div className="flex flex-col gap-2 w-full sm:w-auto">
+                  {isEditing ? (
+                    <>
+                      <button
+                        onClick={salvarEdicao}
+                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+                      >
+                        SALVAR
+                      </button>
+                      <button
+                        onClick={cancelarEdicao}
+                        className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
+                      >
+                        CANCELAR
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => iniciarEdicao(veiculo)}
+                        className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition"
+                      >
+                        EDITAR
+                      </button>
+                      <button
+                        onClick={() => removerVeiculo(veiculo.id)}
+                        className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
+                      >
+                        DELETE
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-
-              {/* Botões de Ação */}
-              <div className="flex flex-col gap-2 w-full sm:w-auto">
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={salvarEdicao}
-                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-                    >
-                      SALVAR
-                    </button>
-                    <button
-                      onClick={cancelarEdicao}
-                      className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
-                    >
-                      CANCELAR
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => iniciarEdicao(veiculo)}
-                      className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition"
-                    >
-                      EDITAR
-                    </button>
-                    <button
-                      onClick={() => removerVeiculo(veiculo.id)}
-                      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-                    >
-                      DELETE
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </main>
   );
