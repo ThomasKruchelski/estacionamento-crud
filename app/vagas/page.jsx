@@ -9,7 +9,14 @@ export default function VagasPage() {
   const [vaga, setVaga] = useState("");
   const [horarioEntrada, sethorarioEntrada] = useState("");
 
-  const [veiculos, setVeiculos] = useState([]);
+  const [veiculos, setVeiculos] = useState(() => {
+    if (typeof window === "undefined") return [];
+
+    const salvos = localStorage.getItem("veiculos-estacionamento");
+    return salvos ? JSON.parse(salvos) : [];
+  });
+
+  // const [veiculos, setVeiculos] = useState([]);
 
   // Novos states para controlar a edição
   const [editandoId, setEditandoId] = useState(null);
@@ -31,6 +38,8 @@ export default function VagasPage() {
   // Salvar no localStorage sempre que mudar
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(veiculos));
+    console.log("Dados no Storage!");
+    console.log(STORAGE_KEY, JSON.stringify(veiculos));
   }, [veiculos]);
 
   function adicionarVeiculo() {

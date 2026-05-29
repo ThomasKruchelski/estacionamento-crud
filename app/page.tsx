@@ -1,4 +1,9 @@
+"use client";
 import Link from "next/link";
+
+import { useEffect, useState } from "react";
+
+const STORAGE_KEY = "veiculos-estacionamento";
 
 export default function Home() {
   return (
