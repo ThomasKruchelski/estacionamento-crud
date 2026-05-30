@@ -1,6 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { db } from "../../lib/firebase";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  doc,
+  deleteDoc,
+  updateDoc,
+} from "firebase/firestore";
 
 const STORAGE_KEY = "veiculos-estacionamento";
 
@@ -14,15 +23,7 @@ export default function VagasPage() {
 
   const [carregado, setCarregado] = useState(false);
 
-  const [veiculos, setVeiculos] = useState(() => {
-    if (typeof window === "undefined") return [];
-
-    const salvos = localStorage.getItem(STORAGE_KEY);
-    // setCarregado(true);
-    return salvos ? JSON.parse(salvos) : [];
-  });
-
-  // const [veiculos, setVeiculos] = useState([]);
+  const [veiculos, setVeiculos] = useState([]);
 
   // Novos states para controlar a edição
   const [editandoId, setEditandoId] = useState(null);
@@ -44,15 +45,33 @@ export default function VagasPage() {
   //   }
   // }, []);
 
-  // Salvar no localStorage sempre que mudar
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(veiculos));
-    setCarregado(true);
-    console.log("Dados no Storage!");
-    console.log(STORAGE_KEY, JSON.stringify(veiculos));
-  }, [veiculos]);
+    async function carregarVeiculos() {
+      try {
+        const querySnapshot = await getDocs(collection(db, "veiculos"));
+        const lista = [];
 
-  useEffect(() => {}, [veiculos, carregado]);
+        querySnapshot.forEach((doc) => {
+          console.log("doc");
+          console.log(doc);
+          lista.push({ id: doc.id, ...doc.data() });
+        });
+
+        setVeiculos(lista);
+      } catch (error) {
+        console.error("Erro ao buscar veículos:", error);
+      } finally {
+        setCarregado(true);
+      }
+    }
+
+    carregarVeiculos();
+  }, []);
+
+  useEffect(() => {
+    console.log("veiculos");
+    console.log(veiculos);
+  }, [veiculos]);
 
   function adicionarVeiculo() {
     if (!placa || !vaga || !horarioEntrada || !cpf || !cliente) {
