@@ -73,37 +73,52 @@ export default function VagasPage() {
     console.log(veiculos);
   }, [veiculos]);
 
-  function adicionarVeiculo() {
+  async function adicionarVeiculo() {
     if (!placa || !vaga || !horarioEntrada || !cpf || !cliente) {
       alert("Preencha todos os campos");
       return;
     }
 
     const novoVeiculo = {
-      id: crypto.randomUUID(),
       placa,
       vaga,
       horarioEntrada,
       cpf,
       cliente,
-      horarioSaida,
+      horarioSaida: horarioSaida || "", // Evita undefined
     };
 
-    setVeiculos((estadoAtual) => [...estadoAtual, novoVeiculo]);
+    try {
+      const docRef = await addDoc(collection(db, "veiculos"), novoVeiculo);
 
-    setPlaca("");
-    setVaga("");
-    sethorarioEntrada("");
-    setCliente("");
-    setCpf("");
+      setVeiculos((estadoAtual) => [
+        ...estadoAtual,
+        { id: docRef.id, ...novoVeiculo },
+      ]);
+
+      // Limpa os campos
+      setPlaca("");
+      setVaga("");
+      sethorarioEntrada("");
+      setCliente("");
+      setCpf("");
+    } catch (error) {
+      alert("Erro ao salvar no banco de dados.");
+      console.error(error);
+    }
   }
 
-  function removerVeiculo(id) {
-    const novaLista = veiculos.filter((veiculo) => veiculo.id !== id);
-    setVeiculos(novaLista);
+  async function removerVeiculo(id) {
+    try {
+      await deleteDoc(doc(db, "veiculos", id));
+
+      const novaLista = veiculos.filter((veiculo) => veiculo.id !== id);
+      setVeiculos(novaLista);
+    } catch (error) {
+      alert("Erro ao deletar veículo.");
+    }
   }
 
-  // --- Funções de Edição ---
   function iniciarEdicao(veiculo) {
     setEditandoId(veiculo.id);
     setDadosEdicao({
@@ -120,13 +135,16 @@ export default function VagasPage() {
     setEditandoId(null);
   }
 
-  function registrarSaida(veiculo) {
+  async function registrarSaida(veiculo) {
     const getDataSaida = new Date();
 
     const dataSaida = getDataSaida
       .toString()
       .replace(" GMT-0300 (Horário Padrão de Brasília)", "");
     console.log(dataSaida);
+
+    const veiculoRef = doc(db, "veiculos", veiculo);
+    await updateDoc(veiculoRef, { horarioSaida: dataSaida });
 
     const novaLista = veiculos.map((v) =>
       v.id === veiculo ? { ...v, horarioSaida: dataSaida } : v,
@@ -135,7 +153,7 @@ export default function VagasPage() {
     setVeiculos(novaLista);
   }
 
-  function salvarEdicao() {
+  async function salvarEdicao() {
     if (
       !dadosEdicao.placa ||
       !dadosEdicao.vaga ||
@@ -147,12 +165,19 @@ export default function VagasPage() {
       return;
     }
 
-    const novaLista = veiculos.map((v) =>
-      v.id === editandoId ? { ...v, ...dadosEdicao } : v,
-    );
+    try {
+      const veiculoRef = doc(db, "veiculos", editandoId);
+      await updateDoc(veiculoRef, dadosEdicao);
 
-    setVeiculos(novaLista);
-    setEditandoId(null);
+      const novaLista = veiculos.map((v) =>
+        v.id === editandoId ? { ...v, ...dadosEdicao } : v,
+      );
+
+      setVeiculos(novaLista);
+      setEditandoId(null);
+    } catch (error) {
+      alert("Erro ao atualizar os dados.");
+    }
   }
 
   return (
