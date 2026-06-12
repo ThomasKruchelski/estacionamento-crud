@@ -25,6 +25,9 @@ export default function VagasPage() {
 
   const [veiculos, setVeiculos] = useState([]);
 
+  const todasVagas = ["01", "02", "03", "04", "05", "06", "07", "08"];
+  const [vagasDisponiveis, setVagasDisponiveis] = useState([]);
+
   // Novos states para controlar a edição
   const [editandoId, setEditandoId] = useState(null);
   const [dadosEdicao, setDadosEdicao] = useState({
@@ -71,7 +74,13 @@ export default function VagasPage() {
   useEffect(() => {
     console.log("veiculos");
     console.log(veiculos);
-  }, [veiculos]);
+    const vagasOcupadas = veiculos.map((veiculo) => veiculo.horarioSaida !== "" ? null : veiculo.vaga );
+
+    const vagasNaoOcupadas = todasVagas.filter((numeroDaVaga) => !vagasOcupadas.includes(numeroDaVaga));
+    console.log('vagasNaoOcupadas')
+    console.log(vagasNaoOcupadas)
+    setVagasDisponiveis(vagasNaoOcupadas)
+  }, [veiculos,dadosEdicao]);
 
   async function adicionarVeiculo() {
     if (!placa || !vaga || !horarioEntrada || !cpf || !cliente) {
@@ -193,13 +202,33 @@ export default function VagasPage() {
           className="border p-2 rounded"
         />
 
+        {!carregado ? (
         <input
           type="text"
-          placeholder="Vaga"
+          placeholder="Carregando..."
           value={vaga}
           onChange={(e) => setVaga(e.target.value)}
           className="border p-2 rounded"
-        />
+          disabled
+        ></input>
+      ): (
+          <select
+            value={vaga}
+            onChange={(e) => setVaga(e.target.value)}
+            className="border p-2 rounded"
+          >
+            <option value="" disabled className="text-black">
+              Selecione uma vaga
+            </option>
+            
+            {/* Renderiza apenas as vagas que passaram no filtro */}
+            {vagasDisponiveis.map((vagaDisponivel) => (
+              <option key={vagaDisponivel} value={vagaDisponivel} className="text-black">
+                Vaga {vagaDisponivel}
+              </option>
+            ))}
+          </select>
+        )}
 
         <input
           type="text"
@@ -243,6 +272,7 @@ export default function VagasPage() {
             return veiculo.horarioSaida !== "" ? (
               <div key={veiculo.id} className="border border-green-400 p-4">
                 <p>Placa: {veiculo.placa}</p>
+                <p>Vaga: {veiculo.vaga}</p>
                 <p>Entrada: {veiculo.horarioEntrada}</p>
                 <p>Saída: {veiculo.horarioSaida}</p>
               </div>
@@ -271,7 +301,7 @@ export default function VagasPage() {
 
                   <p className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <strong className="min-w-[80px]">Vaga:</strong>
-                    <input
+                    {/* <input
                       type="text"
                       placeholder="Vaga"
                       value={isEditing ? dadosEdicao.vaga : veiculo.vaga}
@@ -280,7 +310,26 @@ export default function VagasPage() {
                       }
                       disabled={!isEditing}
                       className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
-                    />
+                    /> */}
+                    <select
+                      value={isEditing ? dadosEdicao.vaga : veiculo.vaga}
+                      onChange={(e) =>
+                        setDadosEdicao({ ...dadosEdicao, vaga: e.target.value })
+                      }
+                      disabled={!isEditing}
+                      className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
+                    >
+                      <option value={veiculo.vaga} className="text-black">
+                        {veiculo.vaga}
+                      </option>
+                      
+                      {/* Renderiza apenas as vagas que passaram no filtro */}
+                      {vagasDisponiveis.map((vagaDisponivel) => (
+                        <option key={vagaDisponivel} value={vagaDisponivel} className="text-black">
+                          {vagaDisponivel}
+                        </option>
+                      ))}
+                    </select>
                   </p>
 
                   <p className="flex flex-col sm:flex-row sm:items-center gap-2">
