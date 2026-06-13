@@ -7,9 +7,7 @@ export function Footer() {
         </p>
 
         <div className="flex gap-6 text-sm text-gray-50">
-          <a href="#">Privacidade</a>
-          <a href="#">Termos</a>
-          <a href="#">Suporte</a>
+          
         </div>
       </div>
     </footer>
