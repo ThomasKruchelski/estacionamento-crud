@@ -1,17 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "../../lib/firebase";
-import {
-  collection,
-  getDocs,
-  addDoc,
-  doc,
-  deleteDoc,
-  updateDoc,
-} from "firebase/firestore";
-
-const STORAGE_KEY = "veiculos-estacionamento";
 
 export default function VagasPage() {
   const [cliente, setCliente] = useState("");
@@ -22,13 +11,11 @@ export default function VagasPage() {
   const [horarioSaida, sethorarioSaida] = useState("");
 
   const [carregado, setCarregado] = useState(false);
-
   const [veiculos, setVeiculos] = useState([]);
 
   const todasVagas = ["01", "02", "03", "04", "05", "06", "07", "08"];
   const [vagasDisponiveis, setVagasDisponiveis] = useState([]);
 
-  // Novos states para controlar a edição
   const [editandoId, setEditandoId] = useState(null);
   const [dadosEdicao, setDadosEdicao] = useState({
     placa: "",
@@ -39,28 +26,14 @@ export default function VagasPage() {
     horarioSaida: "",
   });
 
-  // Caso precise fazer a consulga manual ao local storage, mudado para linha 15,16,17
-  // useEffect(() => {
-  //   const dadosSalvos = localStorage.getItem(STORAGE_KEY);
-
-  //   if (dadosSalvos) {
-  //     setVeiculos(JSON.parse(dadosSalvos));
-  //   }
-  // }, []);
-
+  // Carregar veículos através da API interna
   useEffect(() => {
     async function carregarVeiculos() {
       try {
-        const querySnapshot = await getDocs(collection(db, "veiculos"));
-        const lista = [];
-
-        querySnapshot.forEach((doc) => {
-          console.log("doc");
-          console.log(doc);
-          lista.push({ id: doc.id, ...doc.data() });
-        });
-
-        setVeiculos(lista);
+        const response = await fetch("/api/veiculos");
+        if (!response.ok) throw new Error("Erro ao buscar dados do servidor");
+        const data = await response.json();
+        setVeiculos(data);
       } catch (error) {
         console.error("Erro ao buscar veículos:", error);
       } finally {
@@ -71,17 +44,19 @@ export default function VagasPage() {
     carregarVeiculos();
   }, []);
 
+  // Monitorar vagas ocupadas/disponíveis
   useEffect(() => {
-    console.log("veiculos");
-    console.log(veiculos);
-    const vagasOcupadas = veiculos.map((veiculo) => veiculo.horarioSaida !== "" ? null : veiculo.vaga );
+    const vagasOcupadas = veiculos.map((veiculo) =>
+      veiculo.horarioSaida !== "" ? null : veiculo.vaga
+    );
 
-    const vagasNaoOcupadas = todasVagas.filter((numeroDaVaga) => !vagasOcupadas.includes(numeroDaVaga));
-    console.log('vagasNaoOcupadas')
-    console.log(vagasNaoOcupadas)
-    setVagasDisponiveis(vagasNaoOcupadas)
-  }, [veiculos,dadosEdicao]);
+    const vagasNaoOcupadas = todasVagas.filter(
+      (numeroDaVaga) => !vagasOcupadas.includes(numeroDaVaga)
+    );
+    setVagasDisponiveis(vagasNaoOcupadas);
+  }, [veiculos, dadosEdicao]);
 
+  // CREATE (POST)
   async function adicionarVeiculo() {
     if (!placa || !vaga || !horarioEntrada || !cpf || !cliente) {
       alert("Preencha todos os campos");
@@ -94,40 +69,50 @@ export default function VagasPage() {
       horarioEntrada,
       cpf,
       cliente,
-      horarioSaida: horarioSaida || "", // Evita undefined
+      horarioSaida: horarioSaida || "",
     };
 
     try {
-      const docRef = await addDoc(collection(db, "veiculos"), novoVeiculo);
+      const response = await fetch("/api/veiculos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(novoVeiculo),
+      });
 
-      setVeiculos((estadoAtual) => [
-        ...estadoAtual,
-        { id: docRef.id, ...novoVeiculo },
-      ]);
+      if (!response.ok) throw new Error();
 
-      // Limpa os campos
+      const veiculoSalvo = await response.json();
+
+      setVeiculos((estadoAtual) => [...estadoAtual, veiculoSalvo]);
+
+      // Limpar campos
       setPlaca("");
       setVaga("");
       sethorarioEntrada("");
       setCliente("");
       setCpf("");
+      sethorarioSaida("");
     } catch (error) {
-      alert("Erro ao salvar no banco de dados.");
-      console.error(error);
+      alert("Erro ao salvar no banco de dados através da API.");
     }
   }
 
+  // DELETE
   async function removerVeiculo(id) {
     try {
-      await deleteDoc(doc(db, "veiculos", id));
+      const response = await fetch(`/api/veiculos/${id}`, {
+        method: "DELETE",
+      });
 
-      const novaLista = veiculos.filter((veiculo) => veiculo.id !== id);
-      setVeiculos(novaLista);
+      if (!response.ok) throw new Error();
+
+      setVeiculos(veiculos.filter((veiculo) => veiculo.id !== id));
     } catch (error) {
       alert("Erro ao deletar veículo.");
     }
   }
 
+  // UPDATE - Iniciar modo de edição
   function iniciarEdicao(veiculo) {
     setEditandoId(veiculo.id);
     setDadosEdicao({
@@ -144,24 +129,31 @@ export default function VagasPage() {
     setEditandoId(null);
   }
 
-  async function registrarSaida(veiculo) {
+  // UPDATE - Registrar Saída (PUT)
+  async function registrarSaida(id) {
     const getDataSaida = new Date();
-
     const dataSaida = getDataSaida
       .toString()
       .replace(" GMT-0300 (Horário Padrão de Brasília)", "");
-    console.log(dataSaida);
 
-    const veiculoRef = doc(db, "veiculos", veiculo);
-    await updateDoc(veiculoRef, { horarioSaida: dataSaida });
+    try {
+      const response = await fetch(`/api/veiculos/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ horarioSaida: dataSaida }),
+      });
 
-    const novaLista = veiculos.map((v) =>
-      v.id === veiculo ? { ...v, horarioSaida: dataSaida } : v,
-    );
+      if (!response.ok) throw new Error();
 
-    setVeiculos(novaLista);
+      setVeiculos(
+        veiculos.map((v) => (v.id === id ? { ...v, horarioSaida: dataSaida } : v))
+      );
+    } catch (error) {
+      alert("Erro ao registrar saída.");
+    }
   }
 
+  // UPDATE - Salvar Edição Completa (PUT)
   async function salvarEdicao() {
     if (
       !dadosEdicao.placa ||
@@ -175,14 +167,17 @@ export default function VagasPage() {
     }
 
     try {
-      const veiculoRef = doc(db, "veiculos", editandoId);
-      await updateDoc(veiculoRef, dadosEdicao);
+      const response = await fetch(`/api/veiculos/${editandoId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dadosEdicao),
+      });
 
-      const novaLista = veiculos.map((v) =>
-        v.id === editandoId ? { ...v, ...dadosEdicao } : v,
+      if (!response.ok) throw new Error();
+
+      setVeiculos(
+        veiculos.map((v) => (v.id === editandoId ? { ...v, ...dadosEdicao } : v))
       );
-
-      setVeiculos(novaLista);
       setEditandoId(null);
     } catch (error) {
       alert("Erro ao atualizar os dados.");
@@ -193,37 +188,33 @@ export default function VagasPage() {
     <main className="p-8 w-full flex flex-col flex-1 items-center justify-center">
       <h1 className="mb-6 text-3xl font-bold flex">Controle de Vagas</h1>
 
-      <div className="mb-6 flex flex-col gap-3 max-w-md">
+      <div className="mb-6 flex flex-col gap-3 max-w-md w-full">
         <input
           type="text"
           placeholder="Placa"
           value={placa}
           onChange={(e) => setPlaca(e.target.value)}
-          className="border p-2 rounded"
+          className="border p-2 rounded text-white"
         />
 
         {!carregado ? (
-        <input
-          type="text"
-          placeholder="Carregando..."
-          value={vaga}
-          onChange={(e) => setVaga(e.target.value)}
-          className="border p-2 rounded"
-          disabled
-        ></input>
-      ): (
+          <input
+            type="text"
+            placeholder="Carregando..."
+            className="border p-2 rounded text-white"
+            disabled
+          />
+        ) : (
           <select
             value={vaga}
             onChange={(e) => setVaga(e.target.value)}
-            className="border p-2 rounded"
+            className="border p-2 rounded text-white"
           >
             <option value="" disabled className="text-black">
               Selecione uma vaga
             </option>
-            
-            {/* Renderiza apenas as vagas que passaram no filtro */}
             {vagasDisponiveis.map((vagaDisponivel) => (
-              <option key={vagaDisponivel} value={vagaDisponivel} className="text-black">
+              <option key={vagaDisponivel} className="text-black" value={vagaDisponivel}>
                 Vaga {vagaDisponivel}
               </option>
             ))}
@@ -235,7 +226,7 @@ export default function VagasPage() {
           placeholder="Nome do Cliente"
           value={cliente}
           onChange={(e) => setCliente(e.target.value)}
-          className="border p-2 rounded"
+          className="border p-2 rounded text-white"
         />
 
         <input
@@ -243,14 +234,14 @@ export default function VagasPage() {
           placeholder="CPF do Cliente"
           value={cpf}
           onChange={(e) => setCpf(e.target.value)}
-          className="border p-2 rounded"
+          className="border p-2 rounded text-white"
         />
 
         <input
           type="datetime-local"
           value={horarioEntrada}
           onChange={(e) => sethorarioEntrada(e.target.value)}
-          className="border p-2 rounded"
+          className="border p-2 rounded text-white"
         />
 
         <button
@@ -266,66 +257,51 @@ export default function VagasPage() {
           <h1>Carregando...</h1>
         ) : (
           veiculos.map((veiculo) => {
-            // Verifica se o item atual é o que está sendo editado
             const isEditing = editandoId === veiculo.id;
 
             return veiculo.horarioSaida !== "" ? (
-              <div key={veiculo.id} className="border border-green-400 p-4">
-                <p>Placa: {veiculo.placa}</p>
-                <p>Vaga: {veiculo.vaga}</p>
-                <p>Entrada: {veiculo.horarioEntrada}</p>
-                <p>Saída: {veiculo.horarioSaida}</p>
+              <div key={veiculo.id} className="border border-green-400 p-4 rounded bg-green-500/5">
+                <p><strong>Placa:</strong> {veiculo.placa}</p>
+                <p><strong>Vaga:</strong> {veiculo.vaga}</p>
+                <p><strong>Entrada:</strong> {veiculo.horarioEntrada}</p>
+                <p><strong>Saída:</strong> {veiculo.horarioSaida}</p>
               </div>
             ) : (
               <div
                 key={veiculo.id}
-                className="border rounded p-4 flex flex-col sm:flex-row justify-between items-center gap-4"
+                className="border rounded p-4 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white/5"
               >
                 <div className="flex flex-col gap-2 w-full">
                   <p className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <strong className="min-w-[80px]">Placa:</strong>
+                    <strong className="min-w-[110px]">Placa:</strong>
                     <input
                       type="text"
-                      placeholder="Placa"
                       value={isEditing ? dadosEdicao.placa : veiculo.placa}
                       onChange={(e) =>
-                        setDadosEdicao({
-                          ...dadosEdicao,
-                          placa: e.target.value,
-                        })
+                        setDadosEdicao({ ...dadosEdicao, placa: e.target.value })
                       }
                       disabled={!isEditing}
-                      className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
+                      className={`border p-2 rounded flex-1 text-black ${
+                        isEditing ? "border-blue-500 bg-white" : "bg-transparent border-transparent text-white"
+                      }`}
                     />
                   </p>
 
                   <p className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <strong className="min-w-[80px]">Vaga:</strong>
-                    {/* <input
-                      type="text"
-                      placeholder="Vaga"
-                      value={isEditing ? dadosEdicao.vaga : veiculo.vaga}
-                      onChange={(e) =>
-                        setDadosEdicao({ ...dadosEdicao, vaga: e.target.value })
-                      }
-                      disabled={!isEditing}
-                      className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
-                    /> */}
+                    <strong className="min-w-[110px]">Vaga:</strong>
                     <select
                       value={isEditing ? dadosEdicao.vaga : veiculo.vaga}
                       onChange={(e) =>
                         setDadosEdicao({ ...dadosEdicao, vaga: e.target.value })
                       }
                       disabled={!isEditing}
-                      className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
+                      className={`border p-2 rounded flex-1 text-black ${
+                        isEditing ? "border-blue-500 bg-white" : "bg-transparent border-transparent text-white disabled:opacity-100"
+                      }`}
                     >
-                      <option value={veiculo.vaga} className="text-black">
-                        {veiculo.vaga}
-                      </option>
-                      
-                      {/* Renderiza apenas as vagas que passaram no filtro */}
+                      <option value={veiculo.vaga}>{veiculo.vaga}</option>
                       {vagasDisponiveis.map((vagaDisponivel) => (
-                        <option key={vagaDisponivel} value={vagaDisponivel} className="text-black">
+                        <option key={vagaDisponivel} value={vagaDisponivel}>
                           {vagaDisponivel}
                         </option>
                       ))}
@@ -333,62 +309,52 @@ export default function VagasPage() {
                   </p>
 
                   <p className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <strong className="min-w-[80px]">Nome Cliente:</strong>
+                    <strong className="min-w-[110px]">Nome Cliente:</strong>
                     <input
                       type="text"
-                      placeholder="Nome do Cliente"
                       value={isEditing ? dadosEdicao.cliente : veiculo.cliente}
                       onChange={(e) =>
-                        setDadosEdicao({
-                          ...dadosEdicao,
-                          cliente: e.target.value,
-                        })
+                        setDadosEdicao({ ...dadosEdicao, cliente: e.target.value })
                       }
                       disabled={!isEditing}
-                      className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
+                      className={`border p-2 rounded flex-1 text-black ${
+                        isEditing ? "border-blue-500 bg-white" : "bg-transparent border-transparent text-white"
+                      }`}
                     />
                   </p>
 
                   <p className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <strong className="min-w-[80px]">CPF Cliente:</strong>
+                    <strong className="min-w-[110px]">CPF Cliente:</strong>
                     <input
                       type="text"
-                      placeholder="Nome do Cliente"
                       value={isEditing ? dadosEdicao.cpf : veiculo.cpf}
                       onChange={(e) =>
-                        setDadosEdicao({
-                          ...dadosEdicao,
-                          cpf: e.target.value,
-                        })
+                        setDadosEdicao({ ...dadosEdicao, cpf: e.target.value })
                       }
                       disabled={!isEditing}
-                      className={`border p-2 rounded flex-1 ${isEditing ? "border-blue-500" : ""}`}
+                      className={`border p-2 rounded flex-1 text-black ${
+                        isEditing ? "border-blue-500 bg-white" : "bg-transparent border-transparent text-white"
+                      }`}
                     />
                   </p>
 
                   <p className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <strong className="min-w-[80px]">Entrada:</strong>
+                    <strong className="min-w-[110px]">Entrada:</strong>
                     <input
                       type="datetime-local"
-                      value={
-                        isEditing
-                          ? dadosEdicao.horarioEntrada
-                          : veiculo.horarioEntrada
-                      }
+                      value={isEditing ? dadosEdicao.horarioEntrada : veiculo.horarioEntrada}
                       onChange={(e) =>
-                        setDadosEdicao({
-                          ...dadosEdicao,
-                          horarioEntrada: e.target.value,
-                        })
+                        setDadosEdicao({ ...dadosEdicao, horarioEntrada: e.target.value })
                       }
                       disabled={!isEditing}
-                      className={`border p-2 rounded flex-1 ${isEditing ? " border-blue-500" : ""}`}
+                      className={`border p-2 rounded flex-1 text-black ${
+                        isEditing ? "border-blue-500 bg-white" : "bg-transparent border-transparent text-white"
+                      }`}
                     />
                   </p>
                 </div>
 
-                {/* Botões de Ação */}
-                <div className="flex flex-col gap-2 w-full sm:w-auto">
+                <div className="flex flex-col gap-2 w-full sm:w-auto min-w-[150px]">
                   {isEditing ? (
                     <>
                       <button
@@ -422,7 +388,7 @@ export default function VagasPage() {
                         onClick={() => registrarSaida(veiculo.id)}
                         className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
                       >
-                        ADICIONAR SAIDA
+                        REGISTRAR SAÍDA
                       </button>
                     </>
                   )}
